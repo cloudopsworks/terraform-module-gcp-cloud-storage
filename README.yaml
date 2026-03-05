@@ -1,4 +1,4 @@
-name: Terraform Transit Gateway Module
+name: Terraform Module GCP Cloud Storage
 #logo: logo/logo.jpg
 
 license: "APACHE2"
@@ -8,23 +8,616 @@ copyrights:
     url: "https://cloudops.works"
     year: "2024"
 
-github_repo: cloudopsworks/terraform-module-aws-vpc-setup
+github_repo: cloudopsworks/terraform-module-gcp-cloud-storage
 
 description: |-
-  VPC Module for setting up transit gateway with ResourceAccessMananger support.
+  Terraform module for creating and managing Google Cloud Storage (GCS) buckets with comprehensive configuration options including versioning, lifecycle rules, encryption, logging, retention policies, and hierarchical namespace support.
 
 # Introduction to the project
-#introduction: |-
-#  This is an introduction.
+introduction: |-
+  This Terraform module provides a flexible and opinionated way to create Google Cloud Storage buckets with best practices built-in. It supports:
+  
+  - **Automatic naming**: Generate unique bucket names with optional random suffixes
+  - **Storage classes**: STANDARD, NEARLINE, COLDLINE, or ARCHIVE
+  - **Multi-region and dual-region placement**: Configure data location across regions
+  - **Lifecycle management**: Automate object deletion and storage class transitions
+  - **Security features**: Uniform bucket-level access, public access prevention, and KMS encryption
+  - **Compliance**: Retention policies and soft delete for data protection
+  - **Web hosting**: Static website configuration with custom error pages
+  - **CORS**: Cross-origin resource sharing for web applications
+  - **Access logging**: Track bucket access for audit purposes
+  - **Hierarchical namespace**: Enable file system-like directory structure
 
 # How to use this project
-#usage: |-
+usage: |-
+  ## Terragrunt Usage
+  
+  This module is designed to work with Terragrunt for better infrastructure as code organization. Below is the complete variable reference:
+  
+  ### Variables Reference
+  
+  | Variable | Type | Required | Default | Description |
+  |----------|------|----------|---------|-------------|
+  | `name` | `string` | No | `""` | The name of the Cloud Storage bucket. If not provided, a unique name will be generated. |
+  | `name_prefix` | `string` | Yes | `""` | The prefix to use when generating a unique bucket name. Combined with system_name. |
+  | `random_bucket_suffix` | `bool` | No | `true` | Whether to append a random 8-character string to ensure global uniqueness. |
+  | `short_system_name` | `bool` | No | `false` | Whether to use the short system name instead of full system name. |
+  | `bucket_config` | `any` | No | `{}` | Configuration object for the bucket (see structure below). |
+  
+  ### bucket_config Structure
+  
+  ```yaml
+  bucket_config:
+    location: "US"                          # (Optional) Bucket location: US, EU, asia-northeast1, etc.
+    storage_class: "STANDARD"               # (Optional) STANDARD, NEARLINE, COLDLINE, ARCHIVE
+    force_destroy: false                    # (Optional) Allow bucket deletion with objects
+    public_access_prevention: "inherited"   # (Optional) enforced, inherited
+    uniform_bucket_level_access: true       # (Optional) Use IAM only, no ACLs
+    versioning: false                       # (Optional) Enable object versioning
+    lifecycle_rules: []                     # (Optional) Object lifecycle management rules
+    website: {}                             # (Optional) Static website hosting config
+    cors: []                                # (Optional) CORS configuration
+    encryption: {}                          # (Optional) KMS encryption config
+    logging: {}                             # (Optional) Access logging config
+    retention_policy: {}                    # (Optional) Object retention policy
+    soft_delete_policy: {}                  # (Optional) Soft delete configuration
+    custom_placement_config: {}             # (Optional) Dual-region placement
+    hierarchical_namespace: {}              # (Optional) Hierarchical namespace (HNS)
+    iam_configuration: {}                   # (Optional) IAM configuration overrides
+    labels: {}                              # (Optional) Additional resource labels
+  ```
+  
+  ### Complete Variable Documentation (YAML Format)
+  
+  ```yaml
+  ##
+  ## Bucket Configuration Variables
+  ##
+  
+  # (Optional) The name of the Cloud Storage bucket.
+  # If not provided, a unique name will be generated using name_prefix and system_name.
+  # Must be globally unique across all GCS buckets.
+  # Constraints: 3-63 characters, lowercase letters, numbers, hyphens, and periods.
+  # Cannot begin or end with hyphen or period.
+  # Default: "" (empty string, triggers auto-generation)
+  name: "my-bucket-name"
+  
+  # (Required) The prefix to use when generating a unique bucket name.
+  # Combined with system_name (or system_name_short if short_system_name is true) and optional random suffix.
+  # Example: "myapp-storage" + "dev" + "a1b2c3d4" = "myapp-storage-dev-a1b2c3d4"
+  # Constraints: Must follow GCS naming conventions when combined with other parts.
+  # Default: "" (empty string)
+  name_prefix: "myapp-storage"
+  
+  # (Optional) Whether to append a random 8-character string to the bucket name.
+  # When true, appends a random alphanumeric string (e.g., "a1b2c3d4") to ensure global uniqueness.
+  # When false, uses only the clean name (name_prefix + system_name).
+  # Useful for environments requiring predictable bucket names.
+  # Default: true
+  random_bucket_suffix: true
+  
+  # (Optional) Whether to use the short system name local variable instead of the full system name.
+  # When true, uses local.system_name_short in the bucket name generation.
+  # When false, uses local.system_name (full name).
+  # Useful for environments with strict naming length constraints.
+  # Default: false
+  short_system_name: false
+  
+  # (Optional) The configuration object for the Cloud Storage bucket.
+  # Accepts a map with various bucket settings. All fields are optional with sensible defaults.
+  # Default: {} (empty map, uses all defaults)
+  bucket_config:
+    # (Optional) The location of the bucket.
+    # Valid values: US, EU, ASIA (multi-region)
+    #               US-EAST1, US-WEST1, EUROPE-WEST1 (dual-region)
+    #               asia-northeast1, us-central1, europe-west1 (single region)
+    # Default: "US"
+    location: "US"
+  
+    # (Optional) The storage class of the bucket.
+    # Valid values:
+    #   - STANDARD: Frequently accessed data (default)
+    #   - NEARLINE: Accessed once a month
+    #   - COLDLINE: Accessed once a year
+    #   - ARCHIVE: Accessed less than once a year
+    # Default: "STANDARD"
+    storage_class: "STANDARD"
+  
+    # (Optional) Whether to force destroy the bucket when deleting.
+    # When true, allows deletion of bucket even if it contains objects.
+    # Default: false
+    force_destroy: false
+  
+    # (Optional) Prevents public access to the bucket.
+    # Valid values:
+    #   - enforced: Blocks all public access to the bucket
+    #   - inherited: Inherits public access settings from organization policy
+    # Default: "inherited"
+    public_access_prevention: "inherited"
+  
+    # (Optional) Enables uniform bucket-level access.
+    # When true, disables ACLs and uses only IAM policies for access control.
+    # Default: true
+    uniform_bucket_level_access: true
+  
+    # (Optional) Enables versioning on the bucket.
+    # When true, keeps old versions of objects when updated or deleted.
+    # Default: false
+    versioning: false
+  
+    # (Optional) Lifecycle rules for managing objects in the bucket.
+    # Each rule consists of an action and condition.
+    # Default: []
+    lifecycle_rules:
+      - action:
+          # (Required) The type of action to take.
+          # Valid values: Delete, SetStorageClass, AbortIncompleteMultipartUpload
+          type: "Delete"
+          # (Optional) The storage class to set. Only used when type is SetStorageClass.
+          storage_class: "ARCHIVE"
+        condition:
+          # (Optional) Age of the object in days.
+          age: 365
+          # (Optional) Date in YYYY-MM-DD format.
+          created_before: "2023-01-01"
+          # (Optional) Whether to match live (true), archived (false), or both (null).
+          is_live: true
+          # (Optional) Number of newer versions to retain.
+          num_newer_versions: 3
+          # (Optional) Object name prefixes to match.
+          matches_prefix: ["logs/", "temp/"]
+          # (Optional) Object name suffixes to match.
+          matches_suffix: [".log", ".tmp"]
+  
+    # (Optional) Website configuration for static website hosting.
+    # Default: {}
+    website:
+      # (Optional) Default page for website root
+      main_page_suffix: "index.html"
+      # (Optional) Error page for 404 responses
+      not_found_page: "404.html"
+  
+    # (Optional) CORS configuration for cross-origin resource sharing.
+    # Default: []
+    cors:
+      - # (Optional) Allowed origins
+        origin: ["https://example.com", "https://app.example.com"]
+        # (Optional) Allowed HTTP methods
+        method: ["GET", "PUT", "POST", "DELETE", "HEAD"]
+        # (Optional) Allowed response headers
+        response_header: ["Content-Type", "Authorization"]
+        # (Optional) Cache duration in seconds
+        max_age_seconds: 3600
+  
+    # (Optional) Encryption configuration using Cloud KMS.
+    # Default: {}
+    encryption:
+      # (Required if encryption is specified) KMS key resource ID
+      default_kms_key_name: "projects/PROJECT_ID/locations/REGION/keyRings/KEY_RING/cryptoKeys/KEY_NAME"
+  
+    # (Optional) Logging configuration for access logs.
+    # Default: {}
+    logging:
+      # (Required) Bucket to store access logs
+      log_bucket: "my-access-logs-bucket"
+      # (Optional) Prefix for log object names
+      log_object_prefix: "access-logs/"
+  
+    # (Optional) Retention policy configuration.
+    # Default: {}
+    retention_policy:
+      # (Optional) If true, policy cannot be removed.
+      # Default: false
+      is_locked: false
+      # (Required) Retention period in seconds (e.g., 2592000 = 30 days)
+      retention_period: 2592000
+  
+    # (Optional) Soft delete policy configuration.
+    # Default: {}
+    soft_delete_policy:
+      # (Optional) Duration to retain deleted objects in seconds.
+      # Default: 604800 (7 days)
+      retention_duration_seconds: 604800
+      # (Optional) RFC3339 timestamp when policy takes effect
+      effective_time: "2024-01-01T00:00:00Z"
+  
+    # (Optional) Custom placement configuration for dual-region buckets.
+    # Default: {}
+    custom_placement_config:
+      # (Required) List of two regions for dual-region placement
+      data_locations: ["US-EAST1", "US-WEST1"]
+  
+    # (Optional) Hierarchical namespace configuration.
+    # Default: {}
+    hierarchical_namespace:
+      # (Optional) Enable hierarchical namespace (HNS).
+      # Default: false
+      enabled: false
+  
+    # (Optional) IAM configuration. Can override top-level settings.
+    # Default: {}
+    iam_configuration:
+      # (Optional) Same as top-level public_access_prevention.
+      # Default: "inherited"
+      public_access_prevention: "inherited"
+      # (Optional) Same as top-level uniform_bucket_level_access.
+      # Default: true
+      uniform_bucket_level_access: true
+  
+    # (Optional) Additional labels to apply to the bucket.
+    # Default: {}
+    labels:
+      environment: "production"
+      team: "platform"
+      cost_center: "engineering"
+  ```
 
 # Example usage
-#examples: |-
+examples: |-
+  ## Terragrunt Examples
+  
+  ### Example 1: Basic Development Bucket
+  
+  A simple development bucket with default settings and random suffix for uniqueness.
+  
+  ```hcl
+  # terragrunt.hcl
+  include "root" {
+    path = find_in_parent_folders()
+  }
+  
+  terraform {
+    source = "github.com/cloudopsworks/terraform-module-gcp-cloud-storage?ref=v1.0.0"
+  }
+  
+  inputs = {
+    name_prefix          = "dev-data"
+    random_bucket_suffix = true
+    short_system_name    = false
+    
+    bucket_config = {
+      location      = "US"
+      storage_class = "STANDARD"
+      force_destroy = true
+      versioning    = false
+      
+      labels = {
+        environment = "development"
+        team        = "data-engineering"
+      }
+    }
+  }
+  ```
+  
+  ### Example 2: Production Bucket with Versioning and Lifecycle Rules
+  
+  A production-ready bucket with versioning enabled and automatic cleanup of old versions.
+  
+  ```hcl
+  # terragrunt.hcl
+  include "root" {
+    path = find_in_parent_folders()
+  }
+  
+  terraform {
+    source = "github.com/cloudopsworks/terraform-module-gcp-cloud-storage?ref=v1.0.0"
+  }
+  
+  inputs = {
+    name_prefix          = "prod-assets"
+    random_bucket_suffix = false
+    short_system_name    = true
+    
+    bucket_config = {
+      location                    = "US"
+      storage_class               = "STANDARD"
+      force_destroy               = false
+      versioning                  = true
+      uniform_bucket_level_access = true
+      public_access_prevention    = "enforced"
+      
+      lifecycle_rules = [
+        {
+          action = {
+            type = "Delete"
+          }
+          condition = {
+            age                = 365
+            num_newer_versions = 5
+            is_live            = false
+          }
+        },
+        {
+          action = {
+            type          = "SetStorageClass"
+            storage_class = "NEARLINE"
+          }
+          condition = {
+            age     = 90
+            is_live = true
+          }
+        }
+      ]
+      
+      labels = {
+        environment = "production"
+        team        = "platform"
+        compliance  = "soc2"
+      }
+    }
+  }
+  ```
+  
+  ### Example 3: Static Website Hosting with CORS
+  
+  A bucket configured for hosting a static website with CORS enabled for web applications.
+  
+  ```hcl
+  # terragrunt.hcl
+  include "root" {
+    path = find_in_parent_folders()
+  }
+  
+  terraform {
+    source = "github.com/cloudopsworks/terraform-module-gcp-cloud-storage?ref=v1.0.0"
+  }
+  
+  inputs = {
+    name_prefix          = "website-public"
+    random_bucket_suffix = false
+    
+    bucket_config = {
+      location      = "US"
+      storage_class = "STANDARD"
+      force_destroy = false
+      
+      website = {
+        main_page_suffix = "index.html"
+        not_found_page   = "404.html"
+      }
+      
+      cors = [
+        {
+          origin          = ["https://www.example.com", "https://app.example.com"]
+          method          = ["GET", "HEAD", "OPTIONS"]
+          response_header = ["Content-Type", "Cache-Control"]
+          max_age_seconds = 3600
+        }
+      ]
+      
+      iam_configuration = {
+        public_access_prevention    = "inherited"
+        uniform_bucket_level_access = true
+      }
+      
+      labels = {
+        purpose = "static-website"
+        team    = "frontend"
+      }
+    }
+  }
+  ```
+  
+  ### Example 4: Compliant Bucket with Retention and Encryption
+  
+  A highly secure bucket with KMS encryption, retention policies, and access logging for compliance requirements.
+  
+  ```hcl
+  # terragrunt.hcl
+  include "root" {
+    path = find_in_parent_folders()
+  }
+  
+  terraform {
+    source = "github.com/cloudopsworks/terraform-module-gcp-cloud-storage?ref=v1.0.0"
+  }
+  
+  inputs = {
+    name_prefix          = "compliant-archive"
+    random_bucket_suffix = false
+    
+    bucket_config = {
+      location                    = "US"
+      storage_class               = "ARCHIVE"
+      force_destroy               = false
+      versioning                  = true
+      uniform_bucket_level_access = true
+      public_access_prevention    = "enforced"
+      
+      encryption = {
+        default_kms_key_name = "projects/my-project/locations/us/keyRings/compliance-keys/cryptoKeys/archive-key"
+      }
+      
+      logging = {
+        log_bucket        = "my-project-access-logs"
+        log_object_prefix = "compliant-archive/"
+      }
+      
+      retention_policy = {
+        is_locked        = true
+        retention_period = 2592000  # 30 days in seconds
+      }
+      
+      soft_delete_policy = {
+        retention_duration_seconds = 2592000  # 30 days
+      }
+      
+      lifecycle_rules = [
+        {
+          action = {
+            type = "Delete"
+          }
+          condition = {
+            age = 2592000  # Delete after 30 days
+          }
+        }
+      ]
+      
+      labels = {
+        environment = "production"
+        compliance  = "hipaa"
+        data-class  = "sensitive"
+      }
+    }
+  }
+  ```
+  
+  ### Example 5: Dual-Region Bucket with Hierarchical Namespace
+  
+  A high-availability bucket with dual-region placement and hierarchical namespace for file system-like organization.
+  
+  ```hcl
+  # terragrunt.hcl
+  include "root" {
+    path = find_in_parent_folders()
+  }
+  
+  terraform {
+    source = "github.com/cloudopsworks/terraform-module-gcp-cloud-storage?ref=v1.0.0"
+  }
+  
+  inputs = {
+    name_prefix          = "ha-data-lake"
+    random_bucket_suffix = false
+    
+    bucket_config = {
+      location      = "US"
+      storage_class = "STANDARD"
+      force_destroy = false
+      
+      custom_placement_config = {
+        data_locations = ["US-EAST1", "US-WEST1"]
+      }
+      
+      hierarchical_namespace = {
+        enabled = true
+      }
+      
+      versioning = true
+      
+      lifecycle_rules = [
+        {
+          action = {
+            type          = "SetStorageClass"
+            storage_class = "COLDLINE"
+          }
+          condition = {
+            age            = 180
+            matches_prefix = ["archive/", "backup/"]
+          }
+        }
+      ]
+      
+      labels = {
+        purpose     = "data-lake"
+        availability = "high"
+        team        = "data-platform"
+      }
+    }
+  }
+  ```
 
 # How to get started quickly
-#quickstart: |-
+quickstart: |-
+  ## Quick Start Guide
+  
+  ### Prerequisites
+  
+  - Terraform >= 1.0.0
+  - Terragrunt >= 0.50.0
+  - Google Cloud SDK installed and configured
+  - GCP project with Cloud Storage API enabled
+  
+  ### 1. Initialize Your Terragrunt Setup
+  
+  Create a `terragrunt.hcl` file in your environment directory:
+  
+  ```bash
+  mkdir -p environments/dev/gcs
+  cd environments/dev/gcs
+  ```
+  
+  ```hcl
+  # terragrunt.hcl
+  include "root" {
+    path = find_in_parent_folders()
+  }
+  
+  terraform {
+    source = "github.com/cloudopsworks/terraform-module-gcp-cloud-storage?ref=v1.0.0"
+  }
+  
+  inputs = {
+    name_prefix          = "my-bucket"
+    random_bucket_suffix = true
+    
+    bucket_config = {
+      location      = "US"
+      storage_class = "STANDARD"
+      versioning    = true
+      force_destroy = true  # Set to false for production
+      
+      labels = {
+        environment = "dev"
+      }
+    }
+  }
+  ```
+  
+  ### 2. Configure Google Provider
+  
+  Ensure your root `terragrunt.hcl` or `provider.tf` has the Google provider configured:
+  
+  ```hcl
+  # In parent terragrunt.hcl or terraform.tfvars
+  generate "provider" {
+    path      = "provider.tf"
+    if_exists = "overwrite_terragrunt"
+    contents  = <<-EOF
+      provider "google" {
+        project = "your-gcp-project-id"
+        region  = "us-central1"
+      }
+    EOF
+  }
+  ```
+  
+  ### 3. Authenticate and Deploy
+  
+  ```bash
+  # Authenticate with Google Cloud
+  gcloud auth application-default login
+  
+  # Set your project
+  gcloud config set project your-gcp-project-id
+  
+  # Initialize Terragrunt
+  terragrunt init
+  
+  # Plan the deployment
+  terragrunt plan
+  
+  # Apply the configuration
+  terragrunt apply
+  ```
+  
+  ### 4. Verify Your Bucket
+  
+  ```bash
+  # List buckets in your project
+  gsutil ls
+  
+  # View bucket details
+  gsutil ls -L gs://my-bucket-<random-suffix>
+  ```
+  
+  ### Next Steps
+  
+  - Review the [examples](#examples) section for advanced configurations
+  - Customize lifecycle rules for cost optimization
+  - Enable encryption with Cloud KMS for sensitive data
+  - Configure retention policies for compliance requirements
+  - Set up access logging for audit trails
 
 include:
   - "docs/targets.md"
