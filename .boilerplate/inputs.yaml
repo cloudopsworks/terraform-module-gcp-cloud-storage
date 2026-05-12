@@ -1,18 +1,158 @@
-# Module configuration
-# Required variables
-{{- range .requiredVariables }}
-{{- if ne .Name "org"}}
-# Description {{ .Description }} , Type: {{ .Type }}
-{{ .Name }}: {{ .DefaultValuePlaceholder }}
-{{- end }}
+##
+# (c) 2021-2026
+#     Cloud Ops Works LLC - https://cloudops.works/
+#     Find us on:
+#       GitHub: https://github.com/cloudopsworks
+#       WebSite: https://cloudops.works
+#     Distributed Under Apache v2.0 License
+#
 
-{{- end }}
-# Optional variables
-{{- range .optionalVariables }}
-{{- if ne .Name "is_hub" "spoke_def" "extra_args" }}
-# Description {{ .Description }} , Type: {{ .Type }}
-#{{ .Name }}: {{ .DefaultValue }}
-{{- end }}
+# Module configuration - GCP Cloud Storage Bucket
+# Fill in the values below to configure your deployment.
+# Variables supplied by the Terragrunt hierarchy (org, spoke_def, extra_tags, is_hub) are omitted.
 
-{{- end }}
+# (Optional) The name of the Cloud Storage bucket.
+# If provided, this name is used directly and must be globally unique across all GCS buckets.
+# If empty, a name is auto-generated from name_prefix + system_name [+ random suffix].
+# Constraints: 3-63 characters, lowercase letters, numbers, hyphens, and periods.
+# Cannot begin or end with a hyphen or period.
+# Default: "" (auto-generate)
+#name: "my-unique-bucket-name"
 
+# (Required) Prefix used when auto-generating the bucket name.
+# Combined with system_name (or system_name_short when short_system_name is true)
+# and optionally an 8-character random suffix.
+# Example result: "myapp-storage-prddev-use1-a1b2c3d4"
+name_prefix: ""
+
+# (Optional) Append a random 8-character alphanumeric string to the bucket name.
+# Set to false for predictable, deterministic bucket names.
+# Default: true
+random_bucket_suffix: true
+
+# (Optional) Use the short system name variant instead of the full system name in the bucket name.
+# Useful when strict naming length limits apply.
+# Default: false
+short_system_name: false
+
+# (Optional) Configuration object for the Cloud Storage bucket.
+# All sub-keys are optional unless noted otherwise.
+# Default: {} (all provider defaults apply)
+bucket_config:
+  # (Optional) Bucket location. Supports multi-region, dual-region, and single-region values.
+  # Multi-region:   US | EU | ASIA
+  # Dual-region:    US-EAST1, US-WEST1, EUROPE-WEST1, EUROPE-NORTH1, ASIA-NORTHEAST1, etc.
+  # Single-region:  us-central1, us-east1, europe-west1, asia-northeast1, etc.
+  # Default: "US"
+  location: "US"
+
+  # (Optional) Default storage class for new objects written to the bucket.
+  # Valid values:
+  #   STANDARD  — frequently accessed data (default)
+  #   NEARLINE  — accessed less than once a month
+  #   COLDLINE  — accessed less than once a quarter
+  #   ARCHIVE   — accessed less than once a year
+  # Default: "STANDARD"
+  storage_class: "STANDARD"
+
+  # (Optional) Allow Terraform to delete the bucket even when it still contains objects.
+  # Set to true only for non-production / ephemeral environments.
+  # Default: false
+  force_destroy: false
+
+  # (Optional) Public access prevention policy applied to the bucket.
+  # Valid values:
+  #   enforced  — blocks all public access regardless of ACLs or IAM bindings
+  #   inherited — defers to the organization or project policy
+  # Default: "inherited"
+  public_access_prevention: "inherited"
+
+  # (Optional) Uniform bucket-level access — disables per-object ACLs.
+  # When true, only IAM policies govern access. Recommended for new buckets.
+  # Default: true
+  uniform_bucket_level_access: true
+
+  # (Optional) Enable object versioning.
+  # Retains previous object versions on overwrite or delete.
+  # Default: false
+  versioning: false
+
+  # (Optional) Object lifecycle management rules.
+  # Default: [] (no lifecycle rules)
+  lifecycle_rules: []
+  # Uncomment and edit to add lifecycle rules:
+  # lifecycle_rules:
+  #   - action:
+  #       type: "Delete"               # (Required) Delete | SetStorageClass | AbortIncompleteMultipartUpload
+  #       storage_class: "ARCHIVE"     # (Optional) Target class — only used when type is SetStorageClass
+  #     condition:
+  #       age: 365                     # (Optional) Object age in days
+  #       num_newer_versions: 3        # (Optional) Number of newer versions to retain before acting
+  #       is_live: true                # (Optional) true=live objects only, false=archived only, null=both
+  #       created_before: "2024-01-01" # (Optional) Match objects created before this date (YYYY-MM-DD)
+  #       matches_prefix: ["logs/"]    # (Optional) Object name prefix filter list
+  #       matches_suffix: [".log"]     # (Optional) Object name suffix filter list
+
+  # (Optional) Static website hosting configuration.
+  # Default: {} (disabled)
+  #website:
+  #  main_page_suffix: "index.html"   # (Optional) Default page served at the bucket root
+  #  not_found_page: "404.html"       # (Optional) Page served on 404 responses
+
+  # (Optional) CORS rules for cross-origin browser requests.
+  # Default: [] (disabled)
+  #cors:
+  #  - origin: ["https://example.com"]                      # (Optional) Allowed origins
+  #    method: ["GET", "PUT", "POST", "DELETE", "HEAD"]     # (Optional) Allowed HTTP methods
+  #    response_header: ["Content-Type", "Authorization"]   # (Optional) Allowed response headers
+  #    max_age_seconds: 3600                                 # (Optional) Preflight cache duration in seconds
+
+  # (Optional) Customer-managed encryption key (Cloud KMS).
+  # Default: {} (Google-managed encryption is used)
+  #encryption:
+  #  default_kms_key_name: "projects/PROJECT_ID/locations/REGION/keyRings/KEY_RING/cryptoKeys/KEY_NAME"
+  #    # (Required) Full resource ID of the Cloud KMS key used to encrypt bucket objects
+
+  # (Optional) Access logging — writes request logs to a separate bucket.
+  # Default: {} (disabled)
+  #logging:
+  #  log_bucket: "my-access-logs-bucket"  # (Required) Destination bucket for access logs
+  #  log_object_prefix: "access-logs/"    # (Optional) Prefix applied to log object names
+
+  # (Optional) Object retention policy — prevents deletion before the retention period expires.
+  # Default: {} (disabled)
+  #retention_policy:
+  #  is_locked: false          # (Optional) When true the policy is locked and cannot be removed. Default: false
+  #  retention_period: 2592000 # (Required) Retention period in seconds (e.g. 2592000 = 30 days)
+
+  # (Optional) Soft-delete policy — retains deleted objects for recovery during the specified window.
+  # Default: {} (provider default of 604800 s = 7 days applies)
+  #soft_delete_policy:
+  #  retention_duration_seconds: 604800      # (Optional) Seconds to retain deleted objects. Default: 604800
+  #  effective_time: "2024-01-01T00:00:00Z"  # (Optional) RFC3339 timestamp when the policy takes effect
+
+  # (Optional) Dual-region custom placement — pin objects to exactly two GCP regions.
+  # Only valid when location is a supported dual-region value (e.g. NAM4, EUR4, or custom pair).
+  # Default: {} (not configured)
+  #custom_placement_config:
+  #  data_locations: ["US-EAST1", "US-WEST1"]  # (Required) List of exactly two GCP regions
+
+  # (Optional) Hierarchical namespace (HNS) — enables POSIX-like directory semantics.
+  # Cannot be changed after bucket creation. Requires uniform_bucket_level_access: true.
+  # Default: {} (disabled)
+  #hierarchical_namespace:
+  #  enabled: false  # (Optional) Enable HNS. Default: false
+
+  # (Optional) IAM configuration overrides for this bucket.
+  # Values here override the top-level public_access_prevention and uniform_bucket_level_access.
+  # Default: {} (top-level values used)
+  #iam_configuration:
+  #  public_access_prevention: "inherited"   # (Optional) enforced | inherited
+  #  uniform_bucket_level_access: true       # (Optional) Default: true
+
+  # (Optional) Additional labels applied to the bucket (merged with system-generated tags).
+  # Default: {}
+  #labels:
+  #  environment: "production"
+  #  team: "platform"
+  #  cost_center: "engineering"

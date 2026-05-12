@@ -8,9 +8,9 @@
   -->
 [![README Header][readme_header_img]][readme_header_link]
 
-[![cloudopsworks][logo]](https://cloudops.works/)
+[![cloudopsworks][logo]](https://cloudopsworks.co/)
 
-# Terraform Module GCP Cloud Storage
+# Terraform Module GCP Cloud Storage [![Latest Release](https://img.shields.io/github/release/cloudopsworks/terraform-module-gcp-cloud-storage.svg?style=for-the-badge)](https://github.com/cloudopsworks/terraform-module-gcp-cloud-storage/releases/latest) [![Last Updated](https://img.shields.io/github/last-commit/cloudopsworks/terraform-module-gcp-cloud-storage.svg?style=for-the-badge)](https://github.com/cloudopsworks/terraform-module-gcp-cloud-storage/commits)
 
 
 Terraform module for creating and managing Google Cloud Storage (GCS) buckets with comprehensive configuration options including versioning, lifecycle rules, encryption, logging, retention policies, and hierarchical namespace support.
@@ -20,15 +20,10 @@ Terraform module for creating and managing Google Cloud Storage (GCS) buckets wi
 
 This project is part of our comprehensive approach towards DevOps Acceleration. 
 [<img align="right" title="Share via Email" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/ios-mail.svg"/>][share_email]
-[<img align="right" title="Share on Google+" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-googleplus.svg" />][share_googleplus]
 [<img align="right" title="Share on Facebook" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-facebook.svg" />][share_facebook]
 [<img align="right" title="Share on Reddit" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-reddit.svg" />][share_reddit]
 [<img align="right" title="Share on LinkedIn" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-linkedin.svg" />][share_linkedin]
-[<img align="right" title="Share on Twitter" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-twitter.svg" />][share_twitter]
-
-
-[![Terraform Open Source Modules](https://docs.cloudops.works/images/terraform-open-source-modules.svg)][terraform_modules]
-
+[<img align="right" title="Share on X" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-twitter.svg" />][share_twitter]
 
 
 It's 100% Open Source and licensed under the [APACHE2](LICENSE).
@@ -68,329 +63,179 @@ This Terraform module provides a flexible and opinionated way to create Google C
 Instead pin to the release tag (e.g. `?ref=vX.Y.Z`) of one of our [latest releases](https://github.com/cloudopsworks/terraform-module-gcp-cloud-storage/releases).
 
 
-## Terragrunt Usage
+## Getting Started with Terragrunt Scaffold
 
-This module is designed to work with Terragrunt for better infrastructure as code organization. Below is the complete variable reference:
+The recommended way to deploy this module is via Terragrunt's built-in `scaffold` command,
+which bootstraps `terragrunt.hcl`, `inputs.yaml`, and `local-tags.json` in your deployment
+directory from the module's `.boilerplate/` templates.
 
-### Variables Reference
+### 1. Create the Deployment Directory
 
-| Variable | Type | Required | Default | Description |
-|----------|------|----------|---------|-------------|
-| `name` | `string` | No | `""` | The name of the Cloud Storage bucket. If not provided, a unique name will be generated. |
-| `name_prefix` | `string` | Yes | `""` | The prefix to use when generating a unique bucket name. Combined with system_name. |
-| `random_bucket_suffix` | `bool` | No | `true` | Whether to append a random 8-character string to ensure global uniqueness. |
-| `short_system_name` | `bool` | No | `false` | Whether to use the short system name instead of full system name. |
-| `bucket_config` | `any` | No | `{}` | Configuration object for the bucket (see structure below). |
-
-### bucket_config Structure
-
-```yaml
-bucket_config:
-  location: "US"                          # (Optional) Bucket location: US, EU, asia-northeast1, etc.
-  storage_class: "STANDARD"               # (Optional) STANDARD, NEARLINE, COLDLINE, ARCHIVE
-  force_destroy: false                    # (Optional) Allow bucket deletion with objects
-  public_access_prevention: "inherited"   # (Optional) enforced, inherited
-  uniform_bucket_level_access: true       # (Optional) Use IAM only, no ACLs
-  versioning: false                       # (Optional) Enable object versioning
-  lifecycle_rules: []                     # (Optional) Object lifecycle management rules
-  website: {}                             # (Optional) Static website hosting config
-  cors: []                                # (Optional) CORS configuration
-  encryption: {}                          # (Optional) KMS encryption config
-  logging: {}                             # (Optional) Access logging config
-  retention_policy: {}                    # (Optional) Object retention policy
-  soft_delete_policy: {}                  # (Optional) Soft delete configuration
-  custom_placement_config: {}             # (Optional) Dual-region placement
-  hierarchical_namespace: {}              # (Optional) Hierarchical namespace (HNS)
-  iam_configuration: {}                   # (Optional) IAM configuration overrides
-  labels: {}                              # (Optional) Additional resource labels
+```sh
+# Replace placeholders with your environment, region, spoke, and stack name
+mkdir -p <environment>/<region>/<spoke>/cloud-storage
+cd <environment>/<region>/<spoke>/cloud-storage
 ```
 
-### Complete Variable Documentation (YAML Format)
+### 2. Scaffold the Module
+
+```sh
+# Scaffold writes into the current directory — do NOT use --working-dir
+terragrunt scaffold github.com/cloudopsworks/terraform-module-gcp-cloud-storage
+```
+
+### 3. Edit `inputs.yaml`
+
+Scaffold pre-populates `inputs.yaml` with all module variables and inline documentation.
+Fill in the required values and uncomment optional sections as needed:
 
 ```yaml
-##
-## Bucket Configuration Variables
-##
+# Module configuration - GCP Cloud Storage Bucket
 
-# (Optional) The name of the Cloud Storage bucket.
-# If not provided, a unique name will be generated using name_prefix and system_name.
-# Must be globally unique across all GCS buckets.
-# Constraints: 3-63 characters, lowercase letters, numbers, hyphens, and periods.
-# Cannot begin or end with hyphen or period.
-# Default: "" (empty string, triggers auto-generation)
-name: "my-bucket-name"
+# (Optional) Direct bucket name (globally unique). Leave empty to auto-generate.
+# Default: "" (auto-generate from name_prefix + system_name)
+#name: "my-unique-bucket-name"
 
-# (Required) The prefix to use when generating a unique bucket name.
-# Combined with system_name (or system_name_short if short_system_name is true) and optional random suffix.
-# Example: "myapp-storage" + "dev" + "a1b2c3d4" = "myapp-storage-dev-a1b2c3d4"
-# Constraints: Must follow GCS naming conventions when combined with other parts.
-# Default: "" (empty string)
+# (Required) Prefix for auto-generated bucket name.
+# Result: "<name_prefix>-<system_name>[-<random8chars>]"
 name_prefix: "myapp-storage"
 
-# (Optional) Whether to append a random 8-character string to the bucket name.
-# When true, appends a random alphanumeric string (e.g., "a1b2c3d4") to ensure global uniqueness.
-# When false, uses only the clean name (name_prefix + system_name).
-# Useful for environments requiring predictable bucket names.
-# Default: true
+# (Optional) Append random 8-char suffix for global uniqueness. Default: true
 random_bucket_suffix: true
 
-# (Optional) Whether to use the short system name local variable instead of the full system name.
-# When true, uses local.system_name_short in the bucket name generation.
-# When false, uses local.system_name (full name).
-# Useful for environments with strict naming length constraints.
-# Default: false
+# (Optional) Use short system name variant in generated name. Default: false
 short_system_name: false
 
-# (Optional) The configuration object for the Cloud Storage bucket.
-# Accepts a map with various bucket settings. All fields are optional with sensible defaults.
-# Default: {} (empty map, uses all defaults)
+# (Optional) Cloud Storage bucket configuration. All sub-keys optional.
 bucket_config:
-  # (Optional) The location of the bucket.
-  # Valid values: US, EU, ASIA (multi-region)
-  #               US-EAST1, US-WEST1, EUROPE-WEST1 (dual-region)
-  #               asia-northeast1, us-central1, europe-west1 (single region)
-  # Default: "US"
-  location: "US"
+  location: "US"                          # (Optional) US | EU | ASIA | us-central1 | … Default: "US"
+  storage_class: "STANDARD"               # (Optional) STANDARD | NEARLINE | COLDLINE | ARCHIVE
+  force_destroy: false                    # (Optional) Allow deletion with objects. Default: false
+  public_access_prevention: "inherited"   # (Optional) enforced | inherited. Default: "inherited"
+  uniform_bucket_level_access: true       # (Optional) IAM-only access. Default: true
+  versioning: false                       # (Optional) Enable versioning. Default: false
+  lifecycle_rules: []                     # (Optional) Lifecycle rules. Default: []
+  #website:
+  #  main_page_suffix: "index.html"
+  #  not_found_page: "404.html"
+  #cors:
+  #  - origin: ["https://example.com"]
+  #    method: ["GET", "HEAD"]
+  #    response_header: ["Content-Type"]
+  #    max_age_seconds: 3600
+  #encryption:
+  #  default_kms_key_name: "projects/PROJECT_ID/locations/REGION/keyRings/KR/cryptoKeys/KEY"
+  #logging:
+  #  log_bucket: "my-access-logs-bucket"
+  #  log_object_prefix: "access-logs/"
+  #retention_policy:
+  #  is_locked: false
+  #  retention_period: 2592000
+  #soft_delete_policy:
+  #  retention_duration_seconds: 604800
+  #custom_placement_config:
+  #  data_locations: ["US-EAST1", "US-WEST1"]
+  #hierarchical_namespace:
+  #  enabled: false
+  #labels:
+  #  environment: "production"
+  #  team: "platform"
+```
 
-  # (Optional) The storage class of the bucket.
-  # Valid values:
-  #   - STANDARD: Frequently accessed data (default)
-  #   - NEARLINE: Accessed once a month
-  #   - COLDLINE: Accessed once a year
-  #   - ARCHIVE: Accessed less than once a year
-  # Default: "STANDARD"
-  storage_class: "STANDARD"
+### 4. Apply
 
-  # (Optional) Whether to force destroy the bucket when deleting.
-  # When true, allows deletion of bucket even if it contains objects.
-  # Default: false
-  force_destroy: false
+```sh
+terragrunt apply
+```
 
-  # (Optional) Prevents public access to the bucket.
-  # Valid values:
-  #   - enforced: Blocks all public access to the bucket
-  #   - inherited: Inherits public access settings from organization policy
-  # Default: "inherited"
-  public_access_prevention: "inherited"
+---
 
-  # (Optional) Enables uniform bucket-level access.
-  # When true, disables ACLs and uses only IAM policies for access control.
-  # Default: true
-  uniform_bucket_level_access: true
+### Rendered `terragrunt.hcl` (generated by scaffold)
 
-  # (Optional) Enables versioning on the bucket.
-  # When true, keeps old versions of objects when updated or deleted.
-  # Default: false
-  versioning: false
+```hcl
+locals {
+  local_vars  = yamldecode(file("./inputs.yaml"))
+  spoke_vars  = yamldecode(file(find_in_parent_folders("spoke-inputs.yaml")))
+  region_vars = yamldecode(file(find_in_parent_folders("region-inputs.yaml")))
+  env_vars    = yamldecode(file(find_in_parent_folders("env-inputs.yaml")))
+  global_vars = yamldecode(file(find_in_parent_folders("global-inputs.yaml")))
 
-  # (Optional) Lifecycle rules for managing objects in the bucket.
-  # Each rule consists of an action and condition.
-  # Default: []
-  lifecycle_rules:
-    - action:
-        # (Required) The type of action to take.
-        # Valid values: Delete, SetStorageClass, AbortIncompleteMultipartUpload
-        type: "Delete"
-        # (Optional) The storage class to set. Only used when type is SetStorageClass.
-        storage_class: "ARCHIVE"
-      condition:
-        # (Optional) Age of the object in days.
-        age: 365
-        # (Optional) Date in YYYY-MM-DD format.
-        created_before: "2023-01-01"
-        # (Optional) Whether to match live (true), archived (false), or both (null).
-        is_live: true
-        # (Optional) Number of newer versions to retain.
-        num_newer_versions: 3
-        # (Optional) Object name prefixes to match.
-        matches_prefix: ["logs/", "temp/"]
-        # (Optional) Object name suffixes to match.
-        matches_suffix: [".log", ".tmp"]
+  local_tags  = jsondecode(file("./local-tags.json"))
+  spoke_tags  = jsondecode(file(find_in_parent_folders("spoke-tags.json")))
+  region_tags = jsondecode(file(find_in_parent_folders("region-tags.json")))
+  env_tags    = jsondecode(file(find_in_parent_folders("env-tags.json")))
+  global_tags = jsondecode(file(find_in_parent_folders("global-tags.json")))
 
-  # (Optional) Website configuration for static website hosting.
-  # Default: {}
-  website:
-    # (Optional) Default page for website root
-    main_page_suffix: "index.html"
-    # (Optional) Error page for 404 responses
-    not_found_page: "404.html"
+  tags = merge(
+    local.global_tags,
+    local.env_tags,
+    local.region_tags,
+    local.spoke_tags,
+    local.local_tags
+  )
+}
 
-  # (Optional) CORS configuration for cross-origin resource sharing.
-  # Default: []
-  cors:
-    - # (Optional) Allowed origins
-      origin: ["https://example.com", "https://app.example.com"]
-      # (Optional) Allowed HTTP methods
-      method: ["GET", "PUT", "POST", "DELETE", "HEAD"]
-      # (Optional) Allowed response headers
-      response_header: ["Content-Type", "Authorization"]
-      # (Optional) Cache duration in seconds
-      max_age_seconds: 3600
+include "root" {
+  path = find_in_parent_folders("root.hcl")
+}
 
-  # (Optional) Encryption configuration using Cloud KMS.
-  # Default: {}
-  encryption:
-    # (Required if encryption is specified) KMS key resource ID
-    default_kms_key_name: "projects/PROJECT_ID/locations/REGION/keyRings/KEY_RING/cryptoKeys/KEY_NAME"
+terraform {
+  source = "github.com/cloudopsworks/terraform-module-gcp-cloud-storage"
+}
 
-  # (Optional) Logging configuration for access logs.
-  # Default: {}
-  logging:
-    # (Required) Bucket to store access logs
-    log_bucket: "my-access-logs-bucket"
-    # (Optional) Prefix for log object names
-    log_object_prefix: "access-logs/"
+inputs = {
+  is_hub    = false
+  org       = local.env_vars.org
+  spoke_def = local.spoke_vars.spoke_def
 
-  # (Optional) Retention policy configuration.
-  # Default: {}
-  retention_policy:
-    # (Optional) If true, policy cannot be removed.
-    # Default: false
-    is_locked: false
-    # (Required) Retention period in seconds (e.g., 2592000 = 30 days)
-    retention_period: 2592000
+  name                 = try(local.local_vars.name, "")
+  name_prefix          = try(local.local_vars.name_prefix, "")
+  random_bucket_suffix = try(local.local_vars.random_bucket_suffix, true)
+  short_system_name    = try(local.local_vars.short_system_name, false)
+  bucket_config        = try(local.local_vars.bucket_config, {})
 
-  # (Optional) Soft delete policy configuration.
-  # Default: {}
-  soft_delete_policy:
-    # (Optional) Duration to retain deleted objects in seconds.
-    # Default: 604800 (7 days)
-    retention_duration_seconds: 604800
-    # (Optional) RFC3339 timestamp when policy takes effect
-    effective_time: "2024-01-01T00:00:00Z"
-
-  # (Optional) Custom placement configuration for dual-region buckets.
-  # Default: {}
-  custom_placement_config:
-    # (Required) List of two regions for dual-region placement
-    data_locations: ["US-EAST1", "US-WEST1"]
-
-  # (Optional) Hierarchical namespace configuration.
-  # Default: {}
-  hierarchical_namespace:
-    # (Optional) Enable hierarchical namespace (HNS).
-    # Default: false
-    enabled: false
-
-  # (Optional) IAM configuration. Can override top-level settings.
-  # Default: {}
-  iam_configuration:
-    # (Optional) Same as top-level public_access_prevention.
-    # Default: "inherited"
-    public_access_prevention: "inherited"
-    # (Optional) Same as top-level uniform_bucket_level_access.
-    # Default: true
-    uniform_bucket_level_access: true
-
-  # (Optional) Additional labels to apply to the bucket.
-  # Default: {}
-  labels:
-    environment: "production"
-    team: "platform"
-    cost_center: "engineering"
+  extra_tags = local.tags
+}
 ```
 
 ## Quick Start
 
-## Quick Start Guide
+## Quick Start
 
 ### Prerequisites
 
-- Terraform >= 1.0.0
-- Terragrunt >= 0.50.0
-- Google Cloud SDK installed and configured
-- GCP project with Cloud Storage API enabled
+- [Terragrunt](https://terragrunt.gruntwork.io/) >= 0.67.0
+- [OpenTofu](https://opentofu.org/) >= 1.7 or Terraform >= 1.7
+- Google Cloud SDK installed and authenticated
+- GCP project with the Cloud Storage API enabled
 
-### 1. Initialize Your Terragrunt Setup
+### Steps
 
-Create a `terragrunt.hcl` file in your environment directory:
+```sh
+# 1. Create the deployment directory
+mkdir -p environments/dev/us-central1/spoke1/cloud-storage
+cd environments/dev/us-central1/spoke1/cloud-storage
 
-```bash
-mkdir -p environments/dev/gcs
-cd environments/dev/gcs
-```
+# 2. Scaffold — generates terragrunt.hcl, inputs.yaml, local-tags.json
+terragrunt scaffold github.com/cloudopsworks/terraform-module-gcp-cloud-storage
 
-```hcl
-# terragrunt.hcl
-include "root" {
-  path = find_in_parent_folders()
-}
+# 3. Edit inputs.yaml (set name_prefix at minimum)
+vi inputs.yaml
 
-terraform {
-  source = "github.com/cloudopsworks/terraform-module-gcp-cloud-storage?ref=v1.0.0"
-}
-
-inputs = {
-  name_prefix          = "my-bucket"
-  random_bucket_suffix = true
-  
-  bucket_config = {
-    location      = "US"
-    storage_class = "STANDARD"
-    versioning    = true
-    force_destroy = true  # Set to false for production
-    
-    labels = {
-      environment = "dev"
-    }
-  }
-}
-```
-
-### 2. Configure Google Provider
-
-Ensure your root `terragrunt.hcl` or `provider.tf` has the Google provider configured:
-
-```hcl
-# In parent terragrunt.hcl or terraform.tfvars
-generate "provider" {
-  path      = "provider.tf"
-  if_exists = "overwrite_terragrunt"
-  contents  = <<-EOF
-    provider "google" {
-      project = "your-gcp-project-id"
-      region  = "us-central1"
-    }
-  EOF
-}
-```
-
-### 3. Authenticate and Deploy
-
-```bash
-# Authenticate with Google Cloud
+# 4. Authenticate and apply
 gcloud auth application-default login
-
-# Set your project
-gcloud config set project your-gcp-project-id
-
-# Initialize Terragrunt
-terragrunt init
-
-# Plan the deployment
-terragrunt plan
-
-# Apply the configuration
 terragrunt apply
 ```
 
-### 4. Verify Your Bucket
+### Verify
 
-```bash
+```sh
 # List buckets in your project
-gsutil ls
+gcloud storage buckets list --project=YOUR_PROJECT_ID
 
-# View bucket details
-gsutil ls -L gs://my-bucket-<random-suffix>
+# Inspect the bucket
+gcloud storage buckets describe gs://YOUR_BUCKET_NAME
 ```
-
-### Next Steps
-
-- Review the [examples](#examples) section for advanced configurations
-- Customize lifecycle rules for cost optimization
-- Enable encryption with Cloud KMS for sensitive data
-- Configure retention policies for compliance requirements
-- Set up access logging for audit trails
 
 
 ## Examples
@@ -667,9 +512,7 @@ Available targets:
   help                                Help screen
   help/all                            Display help for all targets
   help/short                          This help short screen
-  init/aws                            Initialize the project for a specific cloud provider: AWS
-  init/azurerm                        Initialize the project for a specific cloud provider: Azure RM
-  init/gcp                            Initialize the project for a specific cloud provider: GCP
+  init/%                              Initialize the project for a specific cloud provider: %S
   lint                                Lint terraform/opentofu code
   tag                                 Tag the current version
 
@@ -740,10 +583,9 @@ Available targets:
 
 File a GitHub [issue](https://github.com/cloudopsworks/terraform-module-gcp-cloud-storage/issues), send us an [email][email] or join our [Slack Community][slack].
 
-[![README Commercial Support][readme_commercial_support_img]][readme_commercial_support_link]
 
 ## DevOps Tools
-
+[]()
 ## Slack Community
 
 
@@ -821,32 +663,31 @@ This project is maintained by [Cloud Ops Works LLC][website].
 [![README Footer][readme_footer_img]][readme_footer_link]
 [![Beacon][beacon]][website]
 
-  [logo]: https://cloudops.works/logo-300x69.svg
-  [docs]: https://cowk.io/docs?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=docs
-  [website]: https://cowk.io/homepage?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=website
-  [github]: https://cowk.io/github?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=github
-  [jobs]: https://cowk.io/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=jobs
-  [hire]: https://cowk.io/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=hire
-  [slack]: https://cowk.io/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=slack
-  [linkedin]: https://cowk.io/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=linkedin
-  [twitter]: https://cowk.io/twitter?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=twitter
-  [testimonial]: https://cowk.io/leave-testimonial?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=testimonial
-  [office_hours]: https://cloudops.works/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=office_hours
-  [newsletter]: https://cowk.io/newsletter?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=newsletter
-  [email]: https://cowk.io/email?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=email
-  [commercial_support]: https://cowk.io/commercial-support?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=commercial_support
-  [we_love_open_source]: https://cowk.io/we-love-open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=we_love_open_source
-  [terraform_modules]: https://cowk.io/terraform-modules?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=terraform_modules
-  [readme_header_img]: https://cloudops.works/readme/header/img
-  [readme_header_link]: https://cloudops.works/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=readme_header_link
-  [readme_footer_img]: https://cloudops.works/readme/footer/img
-  [readme_footer_link]: https://cloudops.works/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=readme_footer_link
-  [readme_commercial_support_img]: https://cloudops.works/readme/commercial-support/img
-  [readme_commercial_support_link]: https://cloudops.works/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=readme_commercial_support_link
-  [share_twitter]: https://twitter.com/intent/tweet/?text=Terraform+Module+GCP+Cloud+Storage&url=https://github.com/cloudopsworks/terraform-module-gcp-cloud-storage
+  [logo]: https://cloudopsworks.co/images/main-logo.png
+  [docs]: https://cloudopsworks.co/resources?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=docs
+  [website]: https://cloudopsworks.co?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=website
+  [github]: https://cloudopsworks.co/github?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=github
+  [jobs]: https://cloudopsworks.co/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=jobs
+  [hire]: https://cloudopsworks.co/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=hire
+  [slack]: https://cloudopsworks.co/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=slack
+  [linkedin]: https://cloudopsworks.co/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=linkedin
+  [x]: https://cloudopsworks.co/x?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=x
+  [testimonial]: https://cloudopsworks.co/case-studies?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=testimonial
+  [office_hours]: https://cloudopsworks.co/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=office_hours
+  [newsletter]: https://cloudopsworks.co/resources?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=newsletter
+  [email]: https://cloudopsworks.co/contact?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=email
+  [commercial_support]: https://cloudopsworks.co/services?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=commercial_support
+  [we_love_open_source]: https://cloudopsworks.co/open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=we_love_open_source
+  [terraform_modules]: https://cloudopsworks.co/open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=terraform_modules
+  [readme_header_img]: https://cloudopsworks.co/images/readme-header.png
+  [readme_header_link]: https://cloudopsworks.co/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=readme_header_link
+  [readme_footer_img]: https://cloudopsworks.co/images/main-logo-footer.png
+  [readme_footer_link]: https://cloudopsworks.co/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=readme_footer_link
+  [readme_commercial_support_img]: https://cloudopsworks.co/readme/commercial-support/img
+  [readme_commercial_support_link]: https://cloudopsworks.co/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-cloud-storage&utm_content=readme_commercial_support_link
+  [share_twitter]: https://x.com/intent/tweet/?text=Terraform+Module+GCP+Cloud+Storage&url=https://github.com/cloudopsworks/terraform-module-gcp-cloud-storage
   [share_linkedin]: https://www.linkedin.com/shareArticle?mini=true&title=Terraform+Module+GCP+Cloud+Storage&url=https://github.com/cloudopsworks/terraform-module-gcp-cloud-storage
   [share_reddit]: https://reddit.com/submit/?url=https://github.com/cloudopsworks/terraform-module-gcp-cloud-storage
   [share_facebook]: https://facebook.com/sharer/sharer.php?u=https://github.com/cloudopsworks/terraform-module-gcp-cloud-storage
-  [share_googleplus]: https://plus.google.com/share?url=https://github.com/cloudopsworks/terraform-module-gcp-cloud-storage
   [share_email]: mailto:?subject=Terraform+Module+GCP+Cloud+Storage&body=https://github.com/cloudopsworks/terraform-module-gcp-cloud-storage
-  [beacon]: https://ga-beacon.cloudops.works/G-7XWMFVFXZT/cloudopsworks/terraform-module-gcp-cloud-storage?pixel&cs=github&cm=readme&an=terraform-module-gcp-cloud-storage
+  [beacon]: https://ga-beacon.cloudospworks.co/G-QMZVYYN2VN/cloudopsworks/terraform-module-gcp-cloud-storage?pixel&cs=github&cm=readme&an=terraform-module-gcp-cloud-storage
