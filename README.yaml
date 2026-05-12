@@ -1,5 +1,13 @@
-name: Terraform Transit Gateway Module
+name: Terraform Module GCP Cloud Storage
 #logo: logo/logo.jpg
+
+badges:
+  - name: Latest Release
+    image: https://img.shields.io/github/release/cloudopsworks/terraform-module-gcp-cloud-storage.svg?style=for-the-badge
+    url: https://github.com/cloudopsworks/terraform-module-gcp-cloud-storage/releases/latest
+  - name: Last Updated
+    image: https://img.shields.io/github/last-commit/cloudopsworks/terraform-module-gcp-cloud-storage.svg?style=for-the-badge
+    url: https://github.com/cloudopsworks/terraform-module-gcp-cloud-storage/commits
 
 license: "APACHE2"
 
@@ -8,23 +16,466 @@ copyrights:
     url: "https://cloudops.works"
     year: "2024"
 
-github_repo: cloudopsworks/terraform-module-aws-vpc-setup
+github_repo: cloudopsworks/terraform-module-gcp-cloud-storage
 
 description: |-
-  VPC Module for setting up transit gateway with ResourceAccessMananger support.
+  Terraform module for creating and managing Google Cloud Storage (GCS) buckets with comprehensive configuration options including versioning, lifecycle rules, encryption, logging, retention policies, and hierarchical namespace support.
 
 # Introduction to the project
-#introduction: |-
-#  This is an introduction.
+introduction: |-
+  This Terraform module provides a flexible and opinionated way to create Google Cloud Storage buckets with best practices built-in. It supports:
+  
+  - **Automatic naming**: Generate unique bucket names with optional random suffixes
+  - **Storage classes**: STANDARD, NEARLINE, COLDLINE, or ARCHIVE
+  - **Multi-region and dual-region placement**: Configure data location across regions
+  - **Lifecycle management**: Automate object deletion and storage class transitions
+  - **Security features**: Uniform bucket-level access, public access prevention, and KMS encryption
+  - **Compliance**: Retention policies and soft delete for data protection
+  - **Web hosting**: Static website configuration with custom error pages
+  - **CORS**: Cross-origin resource sharing for web applications
+  - **Access logging**: Track bucket access for audit purposes
+  - **Hierarchical namespace**: Enable file system-like directory structure
 
 # How to use this project
-#usage: |-
+usage: |-
+  ## Getting Started with Terragrunt Scaffold
+
+  The recommended way to deploy this module is via Terragrunt's built-in `scaffold` command,
+  which bootstraps `terragrunt.hcl`, `inputs.yaml`, and `local-tags.json` in your deployment
+  directory from the module's `.boilerplate/` templates.
+
+  ### 1. Create the Deployment Directory
+
+  ```sh
+  # Replace placeholders with your environment, region, spoke, and stack name
+  mkdir -p <environment>/<region>/<spoke>/cloud-storage
+  cd <environment>/<region>/<spoke>/cloud-storage
+  ```
+
+  ### 2. Scaffold the Module
+
+  ```sh
+  # Scaffold writes into the current directory — do NOT use --working-dir
+  terragrunt scaffold github.com/cloudopsworks/terraform-module-gcp-cloud-storage
+  ```
+
+  ### 3. Edit `inputs.yaml`
+
+  Scaffold pre-populates `inputs.yaml` with all module variables and inline documentation.
+  Fill in the required values and uncomment optional sections as needed:
+
+  ```yaml
+  # Module configuration - GCP Cloud Storage Bucket
+
+  # (Optional) Direct bucket name (globally unique). Leave empty to auto-generate.
+  # Default: "" (auto-generate from name_prefix + system_name)
+  #name: "my-unique-bucket-name"
+
+  # (Required) Prefix for auto-generated bucket name.
+  # Result: "<name_prefix>-<system_name>[-<random8chars>]"
+  name_prefix: "myapp-storage"
+
+  # (Optional) Append random 8-char suffix for global uniqueness. Default: true
+  random_bucket_suffix: true
+
+  # (Optional) Use short system name variant in generated name. Default: false
+  short_system_name: false
+
+  # (Optional) Cloud Storage bucket configuration. All sub-keys optional.
+  bucket_config:
+    location: "US"                          # (Optional) US | EU | ASIA | us-central1 | … Default: "US"
+    storage_class: "STANDARD"               # (Optional) STANDARD | NEARLINE | COLDLINE | ARCHIVE
+    force_destroy: false                    # (Optional) Allow deletion with objects. Default: false
+    public_access_prevention: "inherited"   # (Optional) enforced | inherited. Default: "inherited"
+    uniform_bucket_level_access: true       # (Optional) IAM-only access. Default: true
+    versioning: false                       # (Optional) Enable versioning. Default: false
+    lifecycle_rules: []                     # (Optional) Lifecycle rules. Default: []
+    #website:
+    #  main_page_suffix: "index.html"
+    #  not_found_page: "404.html"
+    #cors:
+    #  - origin: ["https://example.com"]
+    #    method: ["GET", "HEAD"]
+    #    response_header: ["Content-Type"]
+    #    max_age_seconds: 3600
+    #encryption:
+    #  default_kms_key_name: "projects/PROJECT_ID/locations/REGION/keyRings/KR/cryptoKeys/KEY"
+    #logging:
+    #  log_bucket: "my-access-logs-bucket"
+    #  log_object_prefix: "access-logs/"
+    #retention_policy:
+    #  is_locked: false
+    #  retention_period: 2592000
+    #soft_delete_policy:
+    #  retention_duration_seconds: 604800
+    #custom_placement_config:
+    #  data_locations: ["US-EAST1", "US-WEST1"]
+    #hierarchical_namespace:
+    #  enabled: false
+    #labels:
+    #  environment: "production"
+    #  team: "platform"
+  ```
+
+  ### 4. Apply
+
+  ```sh
+  terragrunt apply
+  ```
+
+  ---
+
+  ### Rendered `terragrunt.hcl` (generated by scaffold)
+
+  ```hcl
+  locals {
+    local_vars  = yamldecode(file("./inputs.yaml"))
+    spoke_vars  = yamldecode(file(find_in_parent_folders("spoke-inputs.yaml")))
+    region_vars = yamldecode(file(find_in_parent_folders("region-inputs.yaml")))
+    env_vars    = yamldecode(file(find_in_parent_folders("env-inputs.yaml")))
+    global_vars = yamldecode(file(find_in_parent_folders("global-inputs.yaml")))
+
+    local_tags  = jsondecode(file("./local-tags.json"))
+    spoke_tags  = jsondecode(file(find_in_parent_folders("spoke-tags.json")))
+    region_tags = jsondecode(file(find_in_parent_folders("region-tags.json")))
+    env_tags    = jsondecode(file(find_in_parent_folders("env-tags.json")))
+    global_tags = jsondecode(file(find_in_parent_folders("global-tags.json")))
+
+    tags = merge(
+      local.global_tags,
+      local.env_tags,
+      local.region_tags,
+      local.spoke_tags,
+      local.local_tags
+    )
+  }
+
+  include "root" {
+    path = find_in_parent_folders("root.hcl")
+  }
+
+  terraform {
+    source = "github.com/cloudopsworks/terraform-module-gcp-cloud-storage"
+  }
+
+  inputs = {
+    is_hub    = false
+    org       = local.env_vars.org
+    spoke_def = local.spoke_vars.spoke_def
+
+    name                 = try(local.local_vars.name, "")
+    name_prefix          = try(local.local_vars.name_prefix, "")
+    random_bucket_suffix = try(local.local_vars.random_bucket_suffix, true)
+    short_system_name    = try(local.local_vars.short_system_name, false)
+    bucket_config        = try(local.local_vars.bucket_config, {})
+
+    extra_tags = local.tags
+  }
+  ```
 
 # Example usage
-#examples: |-
+examples: |-
+  ## Terragrunt Examples
+  
+  ### Example 1: Basic Development Bucket
+  
+  A simple development bucket with default settings and random suffix for uniqueness.
+  
+  ```hcl
+  # terragrunt.hcl
+  include "root" {
+    path = find_in_parent_folders()
+  }
+  
+  terraform {
+    source = "github.com/cloudopsworks/terraform-module-gcp-cloud-storage?ref=v1.0.0"
+  }
+  
+  inputs = {
+    name_prefix          = "dev-data"
+    random_bucket_suffix = true
+    short_system_name    = false
+    
+    bucket_config = {
+      location      = "US"
+      storage_class = "STANDARD"
+      force_destroy = true
+      versioning    = false
+      
+      labels = {
+        environment = "development"
+        team        = "data-engineering"
+      }
+    }
+  }
+  ```
+  
+  ### Example 2: Production Bucket with Versioning and Lifecycle Rules
+  
+  A production-ready bucket with versioning enabled and automatic cleanup of old versions.
+  
+  ```hcl
+  # terragrunt.hcl
+  include "root" {
+    path = find_in_parent_folders()
+  }
+  
+  terraform {
+    source = "github.com/cloudopsworks/terraform-module-gcp-cloud-storage?ref=v1.0.0"
+  }
+  
+  inputs = {
+    name_prefix          = "prod-assets"
+    random_bucket_suffix = false
+    short_system_name    = true
+    
+    bucket_config = {
+      location                    = "US"
+      storage_class               = "STANDARD"
+      force_destroy               = false
+      versioning                  = true
+      uniform_bucket_level_access = true
+      public_access_prevention    = "enforced"
+      
+      lifecycle_rules = [
+        {
+          action = {
+            type = "Delete"
+          }
+          condition = {
+            age                = 365
+            num_newer_versions = 5
+            is_live            = false
+          }
+        },
+        {
+          action = {
+            type          = "SetStorageClass"
+            storage_class = "NEARLINE"
+          }
+          condition = {
+            age     = 90
+            is_live = true
+          }
+        }
+      ]
+      
+      labels = {
+        environment = "production"
+        team        = "platform"
+        compliance  = "soc2"
+      }
+    }
+  }
+  ```
+  
+  ### Example 3: Static Website Hosting with CORS
+  
+  A bucket configured for hosting a static website with CORS enabled for web applications.
+  
+  ```hcl
+  # terragrunt.hcl
+  include "root" {
+    path = find_in_parent_folders()
+  }
+  
+  terraform {
+    source = "github.com/cloudopsworks/terraform-module-gcp-cloud-storage?ref=v1.0.0"
+  }
+  
+  inputs = {
+    name_prefix          = "website-public"
+    random_bucket_suffix = false
+    
+    bucket_config = {
+      location      = "US"
+      storage_class = "STANDARD"
+      force_destroy = false
+      
+      website = {
+        main_page_suffix = "index.html"
+        not_found_page   = "404.html"
+      }
+      
+      cors = [
+        {
+          origin          = ["https://www.example.com", "https://app.example.com"]
+          method          = ["GET", "HEAD", "OPTIONS"]
+          response_header = ["Content-Type", "Cache-Control"]
+          max_age_seconds = 3600
+        }
+      ]
+      
+      iam_configuration = {
+        public_access_prevention    = "inherited"
+        uniform_bucket_level_access = true
+      }
+      
+      labels = {
+        purpose = "static-website"
+        team    = "frontend"
+      }
+    }
+  }
+  ```
+  
+  ### Example 4: Compliant Bucket with Retention and Encryption
+  
+  A highly secure bucket with KMS encryption, retention policies, and access logging for compliance requirements.
+  
+  ```hcl
+  # terragrunt.hcl
+  include "root" {
+    path = find_in_parent_folders()
+  }
+  
+  terraform {
+    source = "github.com/cloudopsworks/terraform-module-gcp-cloud-storage?ref=v1.0.0"
+  }
+  
+  inputs = {
+    name_prefix          = "compliant-archive"
+    random_bucket_suffix = false
+    
+    bucket_config = {
+      location                    = "US"
+      storage_class               = "ARCHIVE"
+      force_destroy               = false
+      versioning                  = true
+      uniform_bucket_level_access = true
+      public_access_prevention    = "enforced"
+      
+      encryption = {
+        default_kms_key_name = "projects/my-project/locations/us/keyRings/compliance-keys/cryptoKeys/archive-key"
+      }
+      
+      logging = {
+        log_bucket        = "my-project-access-logs"
+        log_object_prefix = "compliant-archive/"
+      }
+      
+      retention_policy = {
+        is_locked        = true
+        retention_period = 2592000  # 30 days in seconds
+      }
+      
+      soft_delete_policy = {
+        retention_duration_seconds = 2592000  # 30 days
+      }
+      
+      lifecycle_rules = [
+        {
+          action = {
+            type = "Delete"
+          }
+          condition = {
+            age = 2592000  # Delete after 30 days
+          }
+        }
+      ]
+      
+      labels = {
+        environment = "production"
+        compliance  = "hipaa"
+        data-class  = "sensitive"
+      }
+    }
+  }
+  ```
+  
+  ### Example 5: Dual-Region Bucket with Hierarchical Namespace
+  
+  A high-availability bucket with dual-region placement and hierarchical namespace for file system-like organization.
+  
+  ```hcl
+  # terragrunt.hcl
+  include "root" {
+    path = find_in_parent_folders()
+  }
+  
+  terraform {
+    source = "github.com/cloudopsworks/terraform-module-gcp-cloud-storage?ref=v1.0.0"
+  }
+  
+  inputs = {
+    name_prefix          = "ha-data-lake"
+    random_bucket_suffix = false
+    
+    bucket_config = {
+      location      = "US"
+      storage_class = "STANDARD"
+      force_destroy = false
+      
+      custom_placement_config = {
+        data_locations = ["US-EAST1", "US-WEST1"]
+      }
+      
+      hierarchical_namespace = {
+        enabled = true
+      }
+      
+      versioning = true
+      
+      lifecycle_rules = [
+        {
+          action = {
+            type          = "SetStorageClass"
+            storage_class = "COLDLINE"
+          }
+          condition = {
+            age            = 180
+            matches_prefix = ["archive/", "backup/"]
+          }
+        }
+      ]
+      
+      labels = {
+        purpose     = "data-lake"
+        availability = "high"
+        team        = "data-platform"
+      }
+    }
+  }
+  ```
 
 # How to get started quickly
-#quickstart: |-
+quickstart: |-
+  ## Quick Start
+
+  ### Prerequisites
+
+  - [Terragrunt](https://terragrunt.gruntwork.io/) >= 0.67.0
+  - [OpenTofu](https://opentofu.org/) >= 1.7 or Terraform >= 1.7
+  - Google Cloud SDK installed and authenticated
+  - GCP project with the Cloud Storage API enabled
+
+  ### Steps
+
+  ```sh
+  # 1. Create the deployment directory
+  mkdir -p environments/dev/us-central1/spoke1/cloud-storage
+  cd environments/dev/us-central1/spoke1/cloud-storage
+
+  # 2. Scaffold — generates terragrunt.hcl, inputs.yaml, local-tags.json
+  terragrunt scaffold github.com/cloudopsworks/terraform-module-gcp-cloud-storage
+
+  # 3. Edit inputs.yaml (set name_prefix at minimum)
+  vi inputs.yaml
+
+  # 4. Authenticate and apply
+  gcloud auth application-default login
+  terragrunt apply
+  ```
+
+  ### Verify
+
+  ```sh
+  # List buckets in your project
+  gcloud storage buckets list --project=YOUR_PROJECT_ID
+
+  # Inspect the bucket
+  gcloud storage buckets describe gs://YOUR_BUCKET_NAME
+  ```
 
 include:
   - "docs/targets.md"
